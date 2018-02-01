@@ -139,6 +139,13 @@ type ResourceDiff struct {
 
 // newResourceDiff creates a new ResourceDiff instance.
 func newResourceDiff(schema map[string]*Schema, config *terraform.ResourceConfig, state *terraform.InstanceState, diff *terraform.InstanceDiff) *ResourceDiff {
+	// Remove any nil diffs just to keep things clean
+	for k, v := range diff.Attributes {
+		if v == nil {
+			delete(diff.Attributes, k)
+		}
+	}
+
 	d := &ResourceDiff{
 		config: config,
 		state:  state,

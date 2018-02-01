@@ -851,3 +851,68 @@ func TestClear(t *testing.T) {
 		})
 	}
 }
+
+func TestGetOk(t *testing.T) {
+	schema := map[string]*Schema{
+		"stream_enabled": {
+			Type:     TypeBool,
+			Optional: true,
+		},
+		"stream_view_type": {
+			Type:     TypeString,
+			Optional: true,
+		},
+		"unrelated_set": {
+			Type:     TypeSet,
+			Optional: true,
+			Elem: &Resource{
+				Schema: map[string]*Schema{
+					"index": &Schema{
+						Type:     TypeInt,
+						Required: true,
+					},
+
+					"value": &Schema{
+						Type:     TypeString,
+						Required: true,
+					},
+				},
+			},
+			Set: func(a interface{}) int {
+				m := a.(map[string]interface{})
+				return m["index"].(int)
+			},
+		},
+	}
+	state := &terraform.InstanceState{
+		Attributes: map[string]string{
+			"stream_enabled":   "false",
+			"stream_view_type": "",
+		},
+	}
+	cfg := testConfig(t, map[string]interface{}{
+		"stream_enabled":   "false",
+		"stream_view_type": "",
+	})
+	diff := &terraform.InstanceDiff{
+		Attributes: map[string]*terraform.ResourceAttrDiff{
+			"stream_enabled": {
+				Old: "true",
+				New: "false",
+			},
+			"stream_view_type": nil,
+		},
+	}
+	m := schemaMap(schema)
+	d := newResourceDiff(m, cfg, state, diff)
+
+	sValue, sOk := d.GetOk("unrelated_set")
+	if sOk {
+		t.Fatalf("Expected unrelated_set to not exist, got: %#v", sValue)
+	}
+
+	svtValue, svtOk := d.GetOk("stream_view_type")
+	if svtOk {
+		t.Fatalf("Expected stream_view_type to not exist, got: %#v", svtValue)
+	}
+}
